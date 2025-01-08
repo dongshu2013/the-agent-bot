@@ -28,16 +28,21 @@ export class MessageCache {
   }
 
   private async initializeExistingPolls() {
+    console.log("initializing existing polls");
     const client = await this.pool.connect();
     try {
+        console.log("querying chat_status");
         const result = await client.query(
             `SELECT chat_id FROM chat_status 
              WHERE pending_message_count > 0`
         );
-        
+
+        console.log("initializing existing polls", result.rows);
         for (const row of result.rows) {
+            console.log("starting polling for chat", row);
             await this.startPollingForChat(row);
         }
+        console.log("initialized existing polls");
     } catch (error) {
         console.error('Error initializing existing polls:', error);
     } finally {
@@ -96,11 +101,11 @@ export class MessageCache {
   }
 
   private async startPollingForChat(chatId: number) {
-    console.log("starting polling for chat", chatId);
     if (this.activePolls.has(chatId)) {
       return;
     }
 
+    console.log("starting polling for chat", chatId);
     const interval = setInterval(async () => {
       const client = await this.pool.connect();
       try {
@@ -122,9 +127,11 @@ export class MessageCache {
     }, this.CHECK_INTERVAL);
 
     this.activePolls.set(chatId, interval);
+    console.log("started polling for chat", chatId);
   }
 
   async cleanup() {
+    console.log("cleaning up");
     for (const interval of this.activePolls.values()) {
       clearInterval(interval);
     }
