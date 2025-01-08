@@ -96,6 +96,7 @@ export class MessageCache {
   }
 
   private async startPollingForChat(chatId: number) {
+    console.log("starting polling for chat", chatId);
     if (this.activePolls.has(chatId)) {
       return;
     }
