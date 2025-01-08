@@ -27,7 +27,6 @@ bot.use(
 
 // Install the conversations plugin.
 bot.use(conversations());
-// bot.use(createConversation(report));
 
 // Handle start command
 bot.command("start", async (ctx) => {
@@ -59,7 +58,6 @@ bot.on("message", async (ctx: MyContext) => {
 
 // Setup bot commands
 bot.api.setMyCommands([
-  { command: "start", description: "View rules" },
   { command: "get_report", description: "Get the evaluation report" },
 ]);
 

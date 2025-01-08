@@ -7,14 +7,42 @@ export class MessageCache {
   private redis: Redis;
   private pool: Pool;
   private readonly CHECK_INTERVAL = 1000;
-  private readonly MESSAGE_THRESHOLD = 2;
+  private readonly MESSAGE_THRESHOLD = 10;
+  private activePolls: Map<number, NodeJS.Timeout> = new Map();
+
   constructor(private bot: Bot<any>) {
     this.redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 
     this.pool = new Pool({
-      connectionString: process.env.DATABASE_URL
+      connectionString: process.env.DATABASE_URL,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
     });
-    this.startPolling();
+
+    this.pool.on('error', (err) => {
+      console.error('Unexpected error on idle client', err);
+    });
+    
+    this.initializeExistingPolls();
+  }
+
+  private async initializeExistingPolls() {
+    const client = await this.pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT chat_id FROM chat_status 
+             WHERE pending_message_count > 0`
+        );
+        
+        for (const row of result.rows) {
+            await this.startPollingForChat(row.chat_id);
+        }
+    } catch (error) {
+        console.error('Error initializing existing polls:', error);
+    } finally {
+        client.release();
+    }
   }
 
   async add(chatId: number, message: string) {
@@ -36,6 +64,8 @@ export class MessageCache {
     } finally {
       client.release();
     }
+
+    await this.startPollingForChat(chatId);
   }
 
   private async processChat(client: any, row: { chat_id: number; pending_message_count: number }) {
@@ -47,40 +77,57 @@ export class MessageCache {
     if (messages) {
       messages = Array.isArray(messages) ? messages : [messages];
       messages = messages.filter((message): message is string => message !== null);
-      const chatClient = new ChatClient();
-      const reply = await chatClient.chat(chatId, messages);
-      await this.bot.api.sendMessage(chatId, reply);
+      if (messages.length > 0) {
+        const chatClient = new ChatClient();
+        const reply = await chatClient.chat(chatId, messages);
+        if (reply && reply.length > 0) {
+          await this.bot.api.sendMessage(chatId, reply);
+        }
+      }
     }
     await client.query(
       `UPDATE chat_status 
-       SET pending_message_count = pending_message_count - $1,
+       SET pending_message_count = GREATEST(0, pending_message_count - $1),
            updated_at = CURRENT_TIMESTAMP
        WHERE chat_id = $2`,
       [count, chatId]
     );
   }
 
-  private async startPolling() {
-    setInterval(async () => {
+  private async startPollingForChat(chatId: number) {
+    if (this.activePolls.has(chatId)) {
+      return;
+    }
+
+    const interval = setInterval(async () => {
       const client = await this.pool.connect();
       try {
-        const now = Math.floor(Date.now() / 1000);
+        const threshold = Math.floor(Date.now() / 1000) - this.MESSAGE_THRESHOLD;
         const result = await client.query(
           `SELECT chat_id, pending_message_count 
            FROM chat_status 
-           WHERE pending_message_count > 0
-           AND last_message_at < $1 - $2`,
-          [now, this.MESSAGE_THRESHOLD]
+           WHERE chat_id = $1 
+           AND (pending_message_count > 5 OR last_message_at < $2)`,
+          [chatId, threshold]
         );
 
-        await Promise.all(result.rows.map(row => this.processChat(client, row)));
+        if (result.rows.length > 0) {
+          await this.processChat(client, result.rows[0]);
+        }
       } finally {
         client.release();
       }
     }, this.CHECK_INTERVAL);
+
+    this.activePolls.set(chatId, interval);
   }
 
   async cleanup() {
+    for (const interval of this.activePolls.values()) {
+      clearInterval(interval);
+    }
+    this.activePolls.clear();
+    
     await this.redis.quit();
     await this.pool.end();
   }

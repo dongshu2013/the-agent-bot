@@ -1,4 +1,4 @@
-CREATE TABLE chat_status (
+CREATE TABLE IF NOT EXISTS chat_status (
   chat_id BIGINT PRIMARY KEY,
   last_message_at BIGINT NOT NULL,
   pending_message_count INTEGER DEFAULT 0,
