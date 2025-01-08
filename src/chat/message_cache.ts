@@ -20,10 +20,10 @@ export class MessageCache {
       connectionTimeoutMillis: 2000,
     });
 
-    this.pool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err);
+    this.pool.on("error", (err) => {
+      console.error("Unexpected error on idle client", err);
     });
-    
+
     this.initializeExistingPolls();
   }
 
@@ -31,28 +31,28 @@ export class MessageCache {
     console.log("initializing existing polls");
     const client = await this.pool.connect();
     try {
-        console.log("querying chat_status");
-        const result = await client.query(
-            `SELECT chat_id FROM chat_status 
+      console.log("querying chat_status");
+      const result = await client.query(
+        `SELECT chat_id FROM chat_status 
              WHERE pending_message_count > 0`
-        );
+      );
 
-        console.log("initializing existing polls", result.rows);
-        for (const row of result.rows) {
-            console.log("starting polling for chat", row);
-            await this.startPollingForChat(row.chat_id);
-        }
-        console.log("initialized existing polls");
+      console.log("initializing existing polls", result.rows);
+      for (const row of result.rows) {
+        console.log("starting polling for chat", row);
+        await this.startPollingForChat(row.chat_id);
+      }
+      console.log("initialized existing polls");
     } catch (error) {
-        console.error('Error initializing existing polls:', error);
+      console.error("Error initializing existing polls:", error);
     } finally {
-        client.release();
+      client.release();
     }
   }
 
   async add(chatId: number, message: string) {
     const now = Math.floor(Date.now() / 1000);
-    
+
     const client = await this.pool.connect();
     try {
       console.log("adding message to cache", chatId, message);
@@ -73,7 +73,10 @@ export class MessageCache {
     await this.startPollingForChat(chatId);
   }
 
-  private async processChat(client: any, row: { chat_id: number; pending_message_count: number }) {
+  private async processChat(
+    client: any,
+    row: { chat_id: number; pending_message_count: number }
+  ) {
     const chatId = row.chat_id;
     const key = `chat:${chatId}`;
     const count = row.pending_message_count;
@@ -81,7 +84,9 @@ export class MessageCache {
     let messages = await this.redis.lpop(key, count);
     if (messages) {
       messages = Array.isArray(messages) ? messages : [messages];
-      messages = messages.filter((message): message is string => message !== null);
+      messages = messages.filter(
+        (message): message is string => message !== null
+      );
       if (messages.length > 0) {
         const chatClient = new ChatClient();
         const reply = await chatClient.chat(chatId, messages);
@@ -108,13 +113,14 @@ export class MessageCache {
     const interval = setInterval(async () => {
       const client = await this.pool.connect();
       try {
-        const threshold = Math.floor(Date.now() / 1000) - this.MESSAGE_THRESHOLD;
+        const threshold =
+          Math.floor(Date.now() / 1000) - this.MESSAGE_THRESHOLD;
         const result = await client.query(
           `SELECT chat_id, pending_message_count 
            FROM chat_status 
            WHERE chat_id = $1 
-           AND (pending_message_count > 0 AND last_message_at < $2) 
-           OR pending_message_count > 5`,
+             AND pending_message_count > 0
+             AND (pending_message_count > 5 OR last_message_at < $2)`,
           [chatId, threshold]
         );
 
@@ -137,7 +143,7 @@ export class MessageCache {
       clearInterval(interval);
     }
     this.activePolls.clear();
-    
+
     await this.redis.quit();
     await this.pool.end();
   }
