@@ -50,6 +50,7 @@ export class MessageCache {
     
     const client = await this.pool.connect();
     try {
+      await this.redis.rpush(`chat:${chatId}`, message);
       await client.query(
         `INSERT INTO chat_status (chat_id, last_message_at, pending_message_count)
          VALUES ($1, $2, 1)
@@ -59,8 +60,6 @@ export class MessageCache {
            updated_at = CURRENT_TIMESTAMP`,
         [chatId, now]
       );
-
-      await this.redis.rpush(`chat:${chatId}`, message);
     } finally {
       client.release();
     }
