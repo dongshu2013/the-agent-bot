@@ -74,7 +74,6 @@ export class MessageCache {
   }
 
   private async processChat(client: any, row: { chat_id: number; pending_message_count: number }) {
-    console.log("processing chat", row);
     const chatId = row.chat_id;
     const key = `chat:${chatId}`;
     const count = row.pending_message_count;
@@ -114,11 +113,13 @@ export class MessageCache {
           `SELECT chat_id, pending_message_count 
            FROM chat_status 
            WHERE chat_id = $1 
-           AND (pending_message_count > 5 OR last_message_at < $2)`,
+           AND (pending_message_count > 0 AND last_message_at < $2) 
+           OR pending_message_count > 5`,
           [chatId, threshold]
         );
 
         if (result.rows.length > 0) {
+          console.log("processing chat", result.rows[0]);
           await this.processChat(client, result.rows[0]);
         }
       } finally {
