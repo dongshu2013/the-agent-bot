@@ -50,6 +50,7 @@ export class MessageCache {
     
     const client = await this.pool.connect();
     try {
+      console.log("adding message to cache", chatId, message);
       await this.redis.rpush(`chat:${chatId}`, message);
       await client.query(
         `INSERT INTO chat_status (chat_id, last_message_at, pending_message_count)
@@ -68,6 +69,7 @@ export class MessageCache {
   }
 
   private async processChat(client: any, row: { chat_id: number; pending_message_count: number }) {
+    console.log("processing chat", row);
     const chatId = row.chat_id;
     const key = `chat:${chatId}`;
     const count = row.pending_message_count;
