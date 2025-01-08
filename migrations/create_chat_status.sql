@@ -6,4 +6,4 @@ CREATE TABLE IF NOT EXISTS chat_status (
 );
 
 -- Index for querying active chats
-CREATE INDEX idx_chat_status_pending ON chat_status(pending_message_count) 
+CREATE INDEX idx_chat_status_pending ON chat_status(pending_message_count)

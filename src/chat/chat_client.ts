@@ -16,6 +16,7 @@ export class ChatClient {
       'Content-Type': 'application/json',
     },
   });
+  private static agentId: number = parseInt(process.env.AGENT_ID!);
 
   constructor() {
     // No need to create a new axios instance for each ChatClient
@@ -24,7 +25,7 @@ export class ChatClient {
   async chat(tgUserId: number, messages: string[]): Promise<string> {
     try {
       const payload: SendMessagesRequest = { messages };
-      const response = await ChatClient.client.post(`/chat/${tgUserId}`, payload);
+      const response = await ChatClient.client.post(`/chat/${ChatClient.agentId}/${tgUserId}`, payload);
       return response.data.reply;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -40,7 +41,7 @@ export class ChatClient {
 
   async getUserPersona(tgUserId: number): Promise<string> {
     try {
-      const response = await ChatClient.client.get<GetPersonaResponse>(`/user/${tgUserId}/persona`);
+      const response = await ChatClient.client.get<GetPersonaResponse>(`/user/${ChatClient.agentId}/${tgUserId}/persona`);
       return response.data.persona;
     } catch (error) {
       if (axios.isAxiosError(error)) {
