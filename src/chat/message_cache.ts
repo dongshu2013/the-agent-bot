@@ -40,7 +40,7 @@ export class MessageCache {
         console.log("initializing existing polls", result.rows);
         for (const row of result.rows) {
             console.log("starting polling for chat", row);
-            await this.startPollingForChat(row);
+            await this.startPollingForChat(row.chat_id);
         }
         console.log("initialized existing polls");
     } catch (error) {
