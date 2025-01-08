@@ -36,7 +36,7 @@ export class MessageCache {
         );
         
         for (const row of result.rows) {
-            await this.startPollingForChat(row.chat_id);
+            await this.startPollingForChat(row);
         }
     } catch (error) {
         console.error('Error initializing existing polls:', error);
