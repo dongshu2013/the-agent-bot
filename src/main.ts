@@ -40,7 +40,7 @@ bot.command("about_me", async (ctx) => {
 });
 
 // Handle start command
-bot.command("get_report", async (ctx) => {
+bot.command("get_summary", async (ctx) => {
   if (!ctx.from?.id) {
     await ctx.reply("No user id");
     return;
@@ -48,7 +48,7 @@ bot.command("get_report", async (ctx) => {
   const chatClient = new ChatClient();
   const report = await chatClient.getUserPersona(ctx.from?.id);
   if (!report) {
-    await ctx.reply("No report found");
+    await ctx.reply("No summary found");
     return;
   }
   await ctx.reply(report);
@@ -69,7 +69,7 @@ bot.on("message", async (ctx: MyContext) => {
 // Setup bot commands
 bot.api.setMyCommands([
   { command: "about_me", description: "View rules" },
-  { command: "get_report", description: "Get the evaluation report" },
+  { command: "get_summary", description: "Get the summary of your chat" },
 ]);
 
 bot.catch((err) => {
