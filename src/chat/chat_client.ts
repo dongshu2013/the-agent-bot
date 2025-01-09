@@ -41,7 +41,7 @@ export class ChatClient {
 
   async getUserPersona(tgUserId: number): Promise<string> {
     try {
-      const response = await ChatClient.client.get<GetPersonaResponse>(`/user/${ChatClient.agentId}/${tgUserId}/persona`);
+      const response = await ChatClient.client.get<GetPersonaResponse>(`/persona/${ChatClient.agentId}/${tgUserId}`);
       return response.data.persona;
     } catch (error) {
       if (axios.isAxiosError(error)) {
