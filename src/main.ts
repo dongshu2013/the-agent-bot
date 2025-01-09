@@ -68,7 +68,7 @@ bot.on("message", async (ctx: MyContext) => {
 
 // Setup bot commands
 bot.api.setMyCommands([
-  { command: "about_me", description: "View rules" },
+  { command: "about_me", description: "About me" },
   { command: "get_summary", description: "Get the summary of your chat" },
 ]);
 
