@@ -41,6 +41,10 @@ bot.command("get_report", async (ctx) => {
   }
   const chatClient = new ChatClient();
   const report = await chatClient.getUserPersona(ctx.from?.id);
+  if (!report) {
+    await ctx.reply("No report found");
+    return;
+  }
   await ctx.reply(report);
 });
 

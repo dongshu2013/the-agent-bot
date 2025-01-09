@@ -102,7 +102,6 @@ export class MessageCache {
         }
       }
     }
-
   }
 
   private async startPollingForChat(chatId: number) {
