@@ -14,6 +14,7 @@ export class ChatClient {
     timeout: 10000,
     headers: {
       'Content-Type': 'application/json',
+      'x-api-key': process.env.API_SECRET_KEY,
     },
   });
   private static agentId: number = parseInt(process.env.AGENT_ID!);
@@ -53,5 +54,10 @@ export class ChatClient {
       }
       throw new Error(`Failed to get user persona: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  async getAgentInfo(): Promise<{description: string, name: string}> {
+    const response = await ChatClient.client.get(`/agent/${ChatClient.agentId}`);
+    return response.data.agent;
   }
 } 

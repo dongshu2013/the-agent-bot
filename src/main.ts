@@ -30,7 +30,13 @@ bot.use(conversations());
 
 // Handle start command
 bot.command("about_me", async (ctx) => {
-  await ctx.reply(startMarkdown, { parse_mode: "MarkdownV2" });
+  const chatClient = new ChatClient();
+  const agentInfo = await chatClient.getAgentInfo();
+  if (!agentInfo || !agentInfo.description) {
+    await ctx.reply("I'm the AI agent to help you.");
+    return;
+  }
+  await ctx.reply(agentInfo.description);
 });
 
 // Handle start command
