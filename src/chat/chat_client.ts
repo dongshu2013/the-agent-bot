@@ -30,10 +30,8 @@ export class ChatClient {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response) {
-          console.log("error response", error.response);
           throw new Error(`Failed to send messages: Server responded with ${error.response.status} - ${error.response.statusText}`);
         } else if (error.request) {
-          console.log("error request", error.request);
           throw new Error('Failed to send messages: No response received from server');
         }
       }

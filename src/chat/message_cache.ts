@@ -6,8 +6,8 @@ import { ChatClient } from "./chat_client";
 export class MessageCache {
   private redis: Redis;
   private pool: Pool;
-  private readonly CHECK_INTERVAL = 1000;
-  private readonly MESSAGE_THRESHOLD = 10;
+  private readonly CHECK_INTERVAL = 2000;
+  private readonly MESSAGE_THRESHOLD = 5;
   private activePolls: Map<number, NodeJS.Timeout> = new Map();
 
   constructor(private bot: Bot<any>) {
@@ -80,8 +80,15 @@ export class MessageCache {
     const chatId = row.chat_id;
     const key = `chat:${chatId}`;
     const count = row.pending_message_count;
-
     let messages = await this.redis.lpop(key, count);
+    await client.query(
+      `UPDATE chat_status
+       SET pending_message_count = GREATEST(0, pending_message_count - $1),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE chat_id = $2`,
+      [count, chatId]
+    );
+
     if (messages) {
       messages = Array.isArray(messages) ? messages : [messages];
       messages = messages.filter(
@@ -95,13 +102,7 @@ export class MessageCache {
         }
       }
     }
-    await client.query(
-      `UPDATE chat_status 
-       SET pending_message_count = GREATEST(0, pending_message_count - $1),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE chat_id = $2`,
-      [count, chatId]
-    );
+
   }
 
   private async startPollingForChat(chatId: number) {
@@ -125,7 +126,6 @@ export class MessageCache {
         );
 
         if (result.rows.length > 0) {
-          console.log("processing chat", result.rows[0]);
           await this.processChat(client, result.rows[0]);
         }
       } finally {
